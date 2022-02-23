@@ -1,109 +1,137 @@
 /****************\
- ** Exercise robin **
+ ** Exercise 1 **
 \****************/
+(async function () {
+  const url = new URL("http://localhost:5176");
+  url.pathname = "api/image/1";
+
+  // promise chaining för att vänta på både response och resultat i ett
+  const image = await fetch(url).then((response) => response.json());
+
+  const imgElement = document.querySelector("#ex-1 img");
+  const pElement = document.querySelector("#ex-1 p");
+
+  imgElement.src = image.url;
+  imgElement.width = image.metadata.width / 2;
+  pElement.textContent = image.metadata.size;
+})();
+
+/****************\
+ ** Exercise 2 **
+\****************/
+(async function () {
+  const containerElement = document.querySelector("#ex-2");
+  const url = new URL("http://localhost:5176");
+
+  for (let id = 1; true; id++) {
+    url.pathname = `api/image/${id}`;
+
+    const response = await fetch(url);
+
+    // leta efter 404 för att avbryta
+    if (response.status === 404) break;
+
+    const image = await response.json();
+
+    containerElement.insertAdjacentHTML(
+      "beforeend",
+      /* html */ `<img src="${image.url}" width="100" height="100">`
+    );
+  }
+})();
+
+/****************\
+ ** Exercise 3 **
+\****************/
+{
+  const buttonElement = document.querySelector("#ex-3 button");
+  buttonElement.onclick = async function () {
+    const postUrl = new URL("http://localhost:5176");
+    postUrl.pathname = "api/image";
+
+    const newImageUrl = prompt("Klistra in en bild url");
+    // sätt som query parameter
+    postUrl.searchParams.set("url", newImageUrl);
+
+    // sätt att vi gör en HTTP POST request
+    const response = await fetch(postUrl, {
+      method: "POST",
+    });
+
+    const image = await response.json();
+
+    const imgElement = document.querySelector("#ex-3 img");
+    const pElement = document.querySelector("#ex-3 p");
+
+    imgElement.src = image.url;
+    imgElement.width = image.metadata.width / 2;
+    pElement.textContent = image.metadata.size;
+  };
+}
 
 /****************\
  ** Exercise 4 **
 \****************/
-{
-  let ball = document.querySelector("#ex-4 .ball");
-  ball.addEventListener("click", moveSequence, { once: true });
+(async function () {
+  const containerElement = document.querySelector("#ex-4");
+  const pElement = document.querySelector("#ex-4 p");
+  const url = new URL("http://localhost:5176");
 
-  function moveSequence(e) {
-    ball.classList.add("not-clickable");
-    ball.style.animation = "move-down 1s 1";
+  // starta klockan
+  const start = Date.now();
 
-    setTimeout(function () {
-      ball.style.animation = "move-right 1s 1";
+  for (let id = 1; id <= 3; id++) {
+    url.pathname = `api/image/${id}/throttle`;
 
-      setTimeout(function () {
-        ball.style.animation = "move-up 1s 1";
+    const response = await fetch(url);
+    const image = await response.json();
 
-        setTimeout(function () {
-          ball.style.animation = "move-left 1s 1";
-
-          setTimeout(function () {
-            ball.classList.remove("not-clickable");
-            ball.addEventListener("click", moveSequence, { once: true });
-          }, 1000);
-        }, 1000);
-      }, 1000);
-    }, 1000);
+    containerElement.insertAdjacentHTML(
+      "afterbegin",
+      /* html */ `<img src="${image.url}" width="100" height="100">`
+    );
   }
-}
+
+  // stanna klockan
+  const stop = Date.now();
+
+  // räkna ut tiden det tog
+  const ms = stop - start;
+  pElement.textContent = `Det tog ${ms} ms för bilderna att ladda ner`;
+})();
 
 /****************\
  ** Exercise 5 **
 \****************/
-{
-  let ball = document.querySelector("#ex-5 .ball");
-  ball.addEventListener("click", moveSequence, { once: true });
+(async function () {
+  const containerElement = document.querySelector("#ex-5");
+  const pElement = document.querySelector("#ex-5 p");
+  const url = new URL("http://localhost:5176");
 
-  async function moveSequence(e) {
-    ball.classList.add("not-clickable");
+  const start = Date.now();
 
-    ball.style.animation = "move-down 1s 1";
-    await delay(1000);
+  // skapa alla löften och lägg i en lista
+  const promises = [];
+  for (let id = 1; id <= 3; id++) {
+    url.pathname = `api/image/${id}/throttle`;
 
-    ball.style.animation = "move-right 1s 1";
-    await delay(1000);
-
-    ball.style.animation = "move-up 1s 1";
-    await delay(1000);
-
-    ball.style.animation = "move-left 1s 1";
-    await delay(1000);
-
-    ball.classList.remove("not-clickable");
-    ball.style.animation = "";
-    ball.addEventListener("click", moveSequence, { once: true });
+    const promise = fetch(url).then((response) => response.json());
+    promises.push(promise);
   }
 
-  // en fin 'util' funktion
-  function delay(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-}
+  // invänta alla löften
+  const images = await Promise.all(promises);
 
-/****************\
- ** Exercise 6 **
-\****************/
-{
-  let balls = document.querySelectorAll("#ex-6 .ball");
-  for (let ball of balls) {
-    ball.addEventListener("click", moveSequence);
+  // gå igenom alla resultat
+  for (const image of images) {
+    containerElement.insertAdjacentHTML(
+      "afterbegin",
+      /* html */ `<img src="${image.url}" width="100" height="100">`
+    );
   }
 
-  async function moveSequence(e) {
-    for (let ball of balls) {
-      ball.classList.add("not-clickable");
-      ball.removeEventListener("click", moveSequence);
-    }
+  const stop = Date.now();
 
-    let promises = [
-      moveBallAndWait(balls[0], 1),
-      moveBallAndWait(balls[1], 3),
-      moveBallAndWait(balls[2], 1.5),
-      moveBallAndWait(balls[3], 2),
-    ];
-
-    await Promise.all(promises);
-
-    for (let ball of balls) {
-      ball.classList.remove("not-clickable");
-      ball.style.animation = "";
-      ball.addEventListener("click", moveSequence);
-    }
-  }
-
-  async function moveBallAndWait(ball, s) {
-    ball.style.animation = `lat-move ${s}s 1`;
-    await defer(s * 1000);
-  }
-
-  function defer(ms) {
-    return new Promise(function (resolve) {
-      setTimeout(resolve, ms);
-    });
-  }
-}
+  const ms = stop - start;
+  pElement.textContent = `Det tog ${ms} ms för bilderna att ladda ner`;
+})();
